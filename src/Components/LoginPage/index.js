@@ -1,7 +1,8 @@
-import React from 'react'
+// import  from 'react'
 import {useNavigate} from 'react-router-dom'
 
 const LoginPage = ({setIsAuthenticated}) => {
+  console.log('Rendering App, Authenticated:')
   const navigate = useNavigate()
 
   const handleLogin = () => {
@@ -13,7 +14,9 @@ const LoginPage = ({setIsAuthenticated}) => {
   return (
     <div>
       <h1>Login Page</h1>
-      <button onClick={handleLogin}>Login</button>
+      <button type="button" onClick={handleLogin}>
+        Login
+      </button>
     </div>
   )
 }
