@@ -1,0 +1,40 @@
+.visually-hidden {
+  position: absolute;
+  left: -10000px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.usage-update {
+  padding: 20px;
+}
+
+.back-btn {
+  margin-bottom: 15px;
+  padding: 5px 10px;
+  background-color: #eee;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  background-color: #f4f4f4;
+}
+
+td,
+th {
+  padding: 10px;
+  border: 1px solid #ccc;
+}
+
+input[type='number'] {
+  width: 80px;
+}

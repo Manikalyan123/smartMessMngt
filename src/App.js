@@ -1,9 +1,16 @@
-import {useState} from 'react'
-import {Routes, Route, Navigate} from 'react-router-dom'
-import LoginPage from './Components/LoginPage'
-import Dashboard from './Components/Dashboard'
-import GroceryEntryPage from './Components/GroceryEntryPage'
-import UpdateUsagePage from './Components/UsageUpdate'
+import React, {useState} from 'react'
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from 'react-router-dom'
+import LoginPage from './components/LoginPage'
+import Dashboard from './components/Dashboard'
+import GroceryEntryPage from './components/GroceryEntryPage'
+import UsageUpdate from './components/UsageUpdate'
+import Reports from './components/Reports'
+import './App.css'
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(
@@ -12,11 +19,12 @@ const App = () => {
 
   return (
     <Routes>
+      {/* Redirect to dashboard if logged in, otherwise show login */}
       <Route
         path="/"
         element={
           isAuthenticated ? (
-            <Navigate to="/dashboard" replace />
+            <Navigate to="/dashboard" />
           ) : (
             <LoginPage setIsAuthenticated={setIsAuthenticated} />
           )
@@ -24,19 +32,19 @@ const App = () => {
       />
       <Route
         path="/dashboard"
-        element={isAuthenticated ? <Dashboard /> : <Navigate to="/" replace />}
+        element={isAuthenticated ? <Dashboard /> : <Navigate to="/" />}
       />
       <Route
         path="/grocery-entry"
-        element={
-          isAuthenticated ? <GroceryEntryPage /> : <Navigate to="/" replace />
-        }
+        element={isAuthenticated ? <GroceryEntryPage /> : <Navigate to="/" />}
       />
       <Route
         path="/usage-update"
-        element={
-          isAuthenticated ? <UpdateUsagePage /> : <Navigate to="/" replace />
-        }
+        element={isAuthenticated ? <UsageUpdate /> : <Navigate to="/" />}
+      />
+      <Route
+        path="/reports"
+        element={isAuthenticated ? <Reports /> : <Navigate to="/" />}
       />
     </Routes>
   )
