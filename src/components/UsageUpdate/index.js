@@ -4,98 +4,117 @@ import './index.css'
 
 const UsageUpdate = () => {
   const [entries, setEntries] = useState([])
+  const [groupedItems, setGroupedItems] = useState({})
   const [usage, setUsage] = useState({})
+  const [remaining, setRemaining] = useState({})
+  const [visibleRemaining, setVisibleRemaining] = useState({})
   const navigate = useNavigate()
 
+  // Load entries & init states
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('groceryEntries')) || []
-    const usageInitial = {}
+    const data = JSON.parse(localStorage.getItem('groceryEntries')) || []
+    const storedRemaining =
+      JSON.parse(localStorage.getItem('groceryRemaining')) || {}
+    const storedUsage = JSON.parse(localStorage.getItem('groceryUsage')) || {}
 
-    stored.forEach(entry => {
-      let qtyValue = 0
-      let unit = ''
+    setEntries(data)
+    setUsage(storedUsage)
+    setRemaining(storedRemaining)
 
-      if (typeof entry.quantity === 'string' && entry.quantity.includes(' ')) {
-        const [value, u] = entry.quantity.split(' ')
-        qtyValue = parseFloat(value)
-        unit = u
-      } else if (typeof entry.quantity === 'number') {
-        qtyValue = entry.quantity
-        unit = entry.unit || ''
+    const grouped = {}
+    data.forEach(({name, quantity, unit}) => {
+      if (!grouped[name]) {
+        grouped[name] = {quantity: 0, unit}
       }
-
-      usageInitial[entry.id] = {
-        used: '',
-        remaining: qtyValue,
-        unit,
-      }
+      grouped[name].quantity += parseFloat(quantity)
     })
+    setGroupedItems(grouped)
 
-    setEntries(stored)
-    setUsage(usageInitial)
+    const initialVisibility = {}
+    Object.keys(grouped).forEach(name => {
+      initialVisibility[name] = true
+    })
+    setVisibleRemaining(initialVisibility)
   }, [])
 
-  const handleUsageChange = (id, value) => {
-    setUsage(prev => {
-      const used = parseFloat(value)
-      const current = prev[id]
-      const remaining =
-        used > 0 ? Math.max(0, current.remaining - used) : current.remaining
-
-      return {
-        ...prev,
-        [id]: {
-          ...current,
-          used: value,
-          remaining,
-        },
-      }
-    })
+  const handleInputChange = (name, value) => {
+    setUsage(prev => ({...prev, [name]: value}))
+    setVisibleRemaining(prev => ({...prev, [name]: false}))
   }
 
-  const handleBack = () => {
-    navigate('/')
+  const handleUpdateClick = name => {
+    const usedQty = parseFloat(usage[name])
+    const item = groupedItems[name]
+
+    if (!item) return alert('Item not found.')
+    if (Number.isNaN(usedQty) || usedQty < 0)
+      return alert('Enter a valid usage amount.')
+
+    const prevRemaining = remaining[name] ?? item.quantity
+
+    if (usedQty > prevRemaining)
+      return alert('Used quantity exceeds remaining quantity.')
+
+    const updatedRemainingQty = prevRemaining - usedQty
+
+    const updatedRemaining = {...remaining, [name]: updatedRemainingQty}
+    const updatedUsage = {...usage, [name]: usedQty}
+
+    setRemaining(updatedRemaining)
+    setUsage(updatedUsage)
+    setVisibleRemaining(prev => ({...prev, [name]: true}))
+
+    // Persist in localStorage
+    localStorage.setItem('groceryRemaining', JSON.stringify(updatedRemaining))
+    localStorage.setItem('groceryUsage', JSON.stringify(updatedUsage))
+    return ''
   }
 
   return (
     <div className="usage-update">
-      <button onClick={handleBack} className="back-btn">
+      <button className="back-btn" onClick={() => navigate(-1)}>
         ← Back
       </button>
       <h2>Update Grocery Usage</h2>
-      {entries.length === 0 ? (
-        <p>No grocery entries found.</p>
+      {Object.keys(groupedItems).length === 0 ? (
+        <p>No grocery items available.</p>
       ) : (
-        <table>
+        <table className="usage-table">
           <thead>
             <tr>
               <th>Item</th>
-              <th>Used</th>
+              <th>Total Quantity</th>
+              <th>Used Quantity</th>
+              <th>Action</th>
               <th>Remaining</th>
-              <th>Unit</th>
             </tr>
           </thead>
           <tbody>
-            {entries.map(entry => (
-              <tr key={entry.id}>
-                <td>{entry.name}</td>
+            {Object.entries(groupedItems).map(([name, {quantity, unit}]) => (
+              <tr key={name}>
+                <td>{name}</td>
                 <td>
-                  <label
-                    htmlFor={`used-${entry.id}`}
-                    className="visually-hidden"
-                  >
-                    Used quantity for {entry.name}
-                  </label>
+                  {quantity} {unit}
+                </td>
+                <td>
                   <input
-                    id={`used-${entry.id}`}
                     type="number"
                     min="0"
-                    value={usage[entry.id]?.used || ''}
-                    onChange={e => handleUsageChange(entry.id, e.target.value)}
+                    value={usage[name] || ''}
+                    onChange={e => handleInputChange(name, e.target.value)}
+                    aria-label={`Used quantity for ${name}`}
                   />
                 </td>
-                <td>{usage[entry.id]?.remaining}</td>
-                <td>{usage[entry.id]?.unit}</td>
+                <td>
+                  <button onClick={() => handleUpdateClick(name)}>
+                    Update
+                  </button>
+                </td>
+                <td>
+                  {visibleRemaining[name]
+                    ? `${remaining[name] ?? quantity} ${unit}`
+                    : `${remaining[name] ?? quantity} ${unit}`}
+                </td>
               </tr>
             ))}
           </tbody>

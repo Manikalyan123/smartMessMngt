@@ -1,40 +1,48 @@
+.back-btn {
+  margin-bottom: 10px;
+  padding: 5px 10px;
+  font-size: 14px;
+  background-color: #444;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.usage-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.usage-table th,
+.usage-table td {
+  padding: 10px;
+  border: 1px solid #ccc;
+  text-align: center;
+}
+
+.usage-table input {
+  padding: 5px;
+  width: 80px;
+}
+
+.usage-table button {
+  padding: 5px 10px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.usage-table button:hover {
+  background-color: #388e3c;
+}
+
 .visually-hidden {
   position: absolute;
-  left: -10000px;
-  top: auto;
   width: 1px;
   height: 1px;
   overflow: hidden;
-}
-
-.usage-update {
-  padding: 20px;
-}
-
-.back-btn {
-  margin-bottom: 15px;
-  padding: 5px 10px;
-  background-color: #eee;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-thead th {
-  background-color: #f4f4f4;
-}
-
-td,
-th {
-  padding: 10px;
-  border: 1px solid #ccc;
-}
-
-input[type='number'] {
-  width: 80px;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
