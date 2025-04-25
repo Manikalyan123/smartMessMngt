@@ -58,7 +58,7 @@ const UsageUpdate = () => {
     const updatedRemainingQty = prevRemaining - usedQty
 
     const updatedRemaining = {...remaining, [name]: updatedRemainingQty}
-    const updatedUsage = {...usage, [name]: usedQty}
+    const updatedUsage = {...usage, [name]: ' '}
 
     setRemaining(updatedRemaining)
     setUsage(updatedUsage)

@@ -58,6 +58,7 @@ const GroceryEntryPage = () => {
       quantity: qty,
       price: pr,
       amount: amount.toFixed(2),
+      date: new Date().toLocaleDateString(),
     }
 
     if (editId) {
