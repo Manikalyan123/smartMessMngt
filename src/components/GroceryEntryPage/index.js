@@ -9,13 +9,20 @@ const groceryItems = [
   {id: '3', name: 'Oil', unit: 'litre'},
   {id: '4', name: 'Sugar', unit: 'kg'},
   {id: '5', name: 'Salt', unit: 'kg'},
+  {id: '6', name: 'Basmati Rice', unit: 'kg'},
+  {id: '7', name: 'Sunflower Oil', unit: 'litre'},
+  {id: '8', name: 'Brown Sugar', unit: 'kg'},
+  {id: '9', name: 'Table Salt', unit: 'kg'},
+  {id: '10', name: 'All Purpose Flour', unit: 'kg'},
 ]
 
-const GroceryEntryPage = () => {
+const GroceryEntryPage = ({onEntriesChanged}) => {
   const navigate = useNavigate()
 
   const [entries, setEntries] = useState([])
-  const [selectedItemId, setSelectedItemId] = useState('')
+  const [searchText, setSearchText] = useState('')
+  const [suggestions, setSuggestions] = useState([])
+  const [selectedItem, setSelectedItem] = useState(null)
   const [quantity, setQuantity] = useState('')
   const [price, setPrice] = useState('')
   const [editId, setEditId] = useState(null)
@@ -28,17 +35,40 @@ const GroceryEntryPage = () => {
 
   useEffect(() => {
     localStorage.setItem('groceryEntries', JSON.stringify(entries))
-  }, [entries])
+    if (onEntriesChanged) {
+      onEntriesChanged(entries)
+    }
+  }, [entries, onEntriesChanged])
+
+  const handleSearchChange = e => {
+    const {value} = e.target
+    setSearchText(value)
+    setSelectedItem(null) // Clear selected item when search text changes
+
+    if (value.length >= 2) {
+      const filteredSuggestions = groceryItems.filter(item =>
+        item.name.toLowerCase().includes(value.toLowerCase()),
+      )
+      setSuggestions(filteredSuggestions)
+    } else {
+      setSuggestions([])
+    }
+  }
+
+  const handleSuggestionClick = item => {
+    setSearchText(item.name)
+    setSelectedItem(item)
+    setSuggestions([])
+  }
 
   const handleAddOrUpdate = () => {
-    const item = groceryItems.find(i => i.id === selectedItemId)
-    const qty = parseFloat(quantity)
-    const pr = parseFloat(price)
-
-    if (!item) {
-      alert('Please select an item')
+    if (!selectedItem) {
+      alert('Please select an item from the suggestions.')
       return
     }
+
+    const qty = parseFloat(quantity)
+    const pr = parseFloat(price)
 
     if (Number.isNaN(qty) || qty <= 0) {
       alert('Enter a valid quantity')
@@ -52,9 +82,9 @@ const GroceryEntryPage = () => {
 
     const amount = qty * pr
     const newEntry = {
-      id: editId || `${item.id}-${Date.now()}`, // use existing ID if editing
-      name: item.name,
-      unit: item.unit,
+      id: editId || `${selectedItem.id}-${Date.now()}`,
+      name: selectedItem.name,
+      unit: selectedItem.unit,
       quantity: qty,
       price: pr,
       amount: amount.toFixed(2),
@@ -68,9 +98,11 @@ const GroceryEntryPage = () => {
       setEntries([...entries, newEntry])
     }
 
-    setSelectedItemId('')
+    setSearchText('')
+    setSelectedItem(null)
     setQuantity('')
     setPrice('')
+    setSuggestions([])
   }
 
   const handleDelete = id => {
@@ -79,7 +111,9 @@ const GroceryEntryPage = () => {
   }
 
   const handleEdit = entry => {
-    setSelectedItemId(groceryItems.find(i => i.name === entry.name)?.id || '')
+    const itemToEdit = groceryItems.find(i => i.name === entry.name)
+    setSearchText(entry.name)
+    setSelectedItem(itemToEdit)
     setQuantity(entry.quantity)
     setPrice(entry.price)
     setEditId(entry.id)
@@ -99,18 +133,22 @@ const GroceryEntryPage = () => {
 
       <div className="form-group">
         <label htmlFor="item">Select Item</label>
-        <select
+        <input
+          type="text"
           id="item"
-          value={selectedItemId}
-          onChange={e => setSelectedItemId(e.target.value)}
-        >
-          <option value="">-- Choose an item --</option>
-          {groceryItems.map(item => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </select>
+          placeholder="Search for an item..."
+          value={searchText}
+          onChange={handleSearchChange}
+        />
+        {suggestions.length > 0 && (
+          <ul className="suggestions">
+            {suggestions.map(item => (
+              <li key={item.id} onClick={() => handleSuggestionClick(item)}>
+                {item.name}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="form-group">
@@ -135,7 +173,11 @@ const GroceryEntryPage = () => {
         />
       </div>
 
-      <button className="btn add-btn" onClick={handleAddOrUpdate}>
+      <button
+        className="btn add-btn"
+        onClick={handleAddOrUpdate}
+        disabled={!selectedItem}
+      >
         {editId ? 'Update Item' : 'Add Item'}
       </button>
 

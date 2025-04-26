@@ -5,11 +5,14 @@ import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
   PhoneAuthProvider,
+  signInWithCredential,
+  createUserWithEmailAndPassword, // ENSURE THIS LINE IS PRESENT
+  sendEmailVerification, // ENSURE THIS LINE IS PRESENT
 } from 'firebase/auth'
 
-// Your web app's Firebase configuration (ensure these are correct)
+// Your web app's Firebase configuration (ENSURE THIS IS YOUR ACTUAL CONFIG)
 const firebaseConfig = {
-  apiKey: 'AIzaSyAdpKnKFq7D2Dau3cbDQF948UFXCTGRC3c', // Replace with your actual API key if different
+  apiKey: 'AIzaSyAdpKnKFq7D2Dau3cbDQF948UFXCTGRC3c', // <---------------------- REPLACE THIS!
   authDomain: 'smartmessmanagement.firebaseapp.com',
   projectId: 'smartmessmanagement',
   storageBucket: 'smartmessmanagement.firebasestorage.app',
@@ -38,8 +41,6 @@ const initRecaptcha = () => {
     return null // Return null if container isn't ready
   }
   try {
-    // Using window.recaptchaVerifier is common, but managing via ref is often cleaner
-    // We'll let LoginPage manage the instance via useRef
     const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
       size: 'invisible',
       callback: response => {
@@ -63,8 +64,11 @@ const initRecaptcha = () => {
 
 export {
   auth,
-  RecaptchaVerifier, // Exporting the class might not be needed by LoginPage anymore
+  RecaptchaVerifier,
   signInWithPhoneNumber,
   PhoneAuthProvider,
   initRecaptcha,
+  signInWithCredential,
+  createUserWithEmailAndPassword, // ENSURE THIS LINE IS PRESENT IN THE EXPORT
+  sendEmailVerification, // ENSURE THIS LINE IS PRESENT IN THE EXPORT
 }

@@ -7,19 +7,16 @@ const UsageUpdate = () => {
   const [groupedItems, setGroupedItems] = useState({})
   const [usage, setUsage] = useState({})
   const [remaining, setRemaining] = useState({})
-  const [visibleRemaining, setVisibleRemaining] = useState({})
   const navigate = useNavigate()
 
-  // Load entries & init states
-  useEffect(() => {
+  const loadData = () => {
     const data = JSON.parse(localStorage.getItem('groceryEntries')) || []
+    const storedUsage = JSON.parse(localStorage.getItem('groceryUsage')) || {}
     const storedRemaining =
       JSON.parse(localStorage.getItem('groceryRemaining')) || {}
-    const storedUsage = JSON.parse(localStorage.getItem('groceryUsage')) || {}
 
     setEntries(data)
     setUsage(storedUsage)
-    setRemaining(storedRemaining)
 
     const grouped = {}
     data.forEach(({name, quantity, unit}) => {
@@ -30,44 +27,49 @@ const UsageUpdate = () => {
     })
     setGroupedItems(grouped)
 
-    const initialVisibility = {}
+    // Initialize remaining with total quantity on load if not already stored
+    const initialRemaining = {}
     Object.keys(grouped).forEach(name => {
-      initialVisibility[name] = true
+      initialRemaining[name] =
+        storedRemaining[name] !== undefined
+          ? parseFloat(storedRemaining[name])
+          : parseFloat(grouped[name].quantity)
     })
-    setVisibleRemaining(initialVisibility)
+    setRemaining(initialRemaining)
+  }
+
+  useEffect(() => {
+    loadData()
   }, [])
+
+  useEffect(() => {
+    localStorage.setItem('groceryRemaining', JSON.stringify(remaining))
+    console.log('useEffect - remaining updated in localStorage:', remaining)
+  }, [remaining])
 
   const handleInputChange = (name, value) => {
     setUsage(prev => ({...prev, [name]: value}))
-    setVisibleRemaining(prev => ({...prev, [name]: false}))
   }
 
   const handleUpdateClick = name => {
     const usedQty = parseFloat(usage[name])
-    const item = groupedItems[name]
+    const currentRemaining =
+      remaining[name] !== undefined
+        ? parseFloat(remaining[name])
+        : parseFloat(groupedItems[name]?.quantity || 0)
 
-    if (!item) return alert('Item not found.')
-    if (Number.isNaN(usedQty) || usedQty < 0)
-      return alert('Enter a valid usage amount.')
+    if (Number.isNaN(usedQty) || usedQty < 0) {
+      alert('Enter a valid usage amount.')
+      return
+    }
 
-    const prevRemaining = remaining[name] ?? item.quantity
+    if (usedQty > currentRemaining) {
+      alert('Used quantity exceeds the remaining quantity.')
+      return
+    }
 
-    if (usedQty > prevRemaining)
-      return alert('Used quantity exceeds remaining quantity.')
-
-    const updatedRemainingQty = prevRemaining - usedQty
-
-    const updatedRemaining = {...remaining, [name]: updatedRemainingQty}
-    const updatedUsage = {...usage, [name]: ' '}
-
-    setRemaining(updatedRemaining)
-    setUsage(updatedUsage)
-    setVisibleRemaining(prev => ({...prev, [name]: true}))
-
-    // Persist in localStorage
-    localStorage.setItem('groceryRemaining', JSON.stringify(updatedRemaining))
-    localStorage.setItem('groceryUsage', JSON.stringify(updatedUsage))
-    return ''
+    const newRemainingQty = currentRemaining - usedQty
+    setRemaining(prevRemaining => ({...prevRemaining, [name]: newRemainingQty}))
   }
 
   return (
@@ -111,9 +113,9 @@ const UsageUpdate = () => {
                   </button>
                 </td>
                 <td>
-                  {visibleRemaining[name]
-                    ? `${remaining[name] ?? quantity} ${unit}`
-                    : `${remaining[name] ?? quantity} ${unit}`}
+                  {remaining[name] !== undefined
+                    ? `${remaining[name]} ${unit}`
+                    : `${quantity} ${unit}`}
                 </td>
               </tr>
             ))}

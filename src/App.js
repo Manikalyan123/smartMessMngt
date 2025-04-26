@@ -6,6 +6,8 @@ import {
   Navigate,
 } from 'react-router-dom'
 import LoginPage from './components/LoginPage'
+import BillsPage from './components/BillsPage'
+
 import Dashboard from './components/Dashboard'
 import GroceryEntryPage from './components/GroceryEntryPage'
 import UsageUpdate from './components/UsageUpdate'
@@ -34,6 +36,8 @@ const App = () => {
         path="/dashboard"
         element={isAuthenticated ? <Dashboard /> : <Navigate to="/" />}
       />
+      <Route path="/bills" element={<BillsPage />} />
+
       <Route
         path="/grocery-entry"
         element={isAuthenticated ? <GroceryEntryPage /> : <Navigate to="/" />}
