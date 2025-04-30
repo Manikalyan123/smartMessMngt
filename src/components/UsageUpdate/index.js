@@ -8,6 +8,7 @@ const UsageUpdate = () => {
   const [usage, setUsage] = useState({})
   const [remaining, setRemaining] = useState({})
   const [inputValues, setInputValues] = useState({})
+  const [lastUpdated, setLastUpdated] = useState({item: null, day: null})
   const navigate = useNavigate()
 
   const loadData = () => {
@@ -16,36 +17,50 @@ const UsageUpdate = () => {
     const storedRemaining =
       JSON.parse(localStorage.getItem('groceryRemaining')) || {}
 
-    setEntries(data)
-    setUsage(storedUsage)
-    setRemaining(storedRemaining)
-
     const grouped = {}
     data.forEach(({name, quantity, unit, price}) => {
       if (!grouped[name]) {
         grouped[name] = {
-          quantity: 0,
+          totalQuantity: 0, // Changed from quantity to totalQuantity for clarity
           unit,
           price: price || 0,
           id: `${name}-${Math.random().toString(36).substr(2, 9)}`,
         }
       }
-      grouped[name].quantity += parseFloat(quantity)
+      grouped[name].totalQuantity += parseFloat(quantity)
     })
-    setGroupedItems(grouped)
 
-    // Initialize input values with existing usage data
     const initialInputValues = {}
     Object.keys(grouped).forEach(name => {
       initialInputValues[name] = storedUsage[name]?.days
         ? storedUsage[name].days.map(val => (val > 0 ? val.toString() : ''))
         : Array(31).fill('')
     })
+
+    // Calculate remaining quantities
+    const calculatedRemaining = {}
+    Object.keys(grouped).forEach(name => {
+      const totalUsed =
+        storedUsage[name]?.days?.reduce((sum, val) => sum + val, 0) || 0
+      calculatedRemaining[name] = grouped[name].totalQuantity - totalUsed
+    })
+
+    setEntries(data)
+    setGroupedItems(grouped)
+    setUsage(storedUsage)
+    setRemaining({...storedRemaining, ...calculatedRemaining}) // Merge stored and calculated
     setInputValues(initialInputValues)
   }
 
   useEffect(() => {
     loadData()
+
+    // Listen for storage updates from other tabs/components
+    const handleStorageUpdate = () => {
+      loadData()
+    }
+    window.addEventListener('storage', handleStorageUpdate)
+    return () => window.removeEventListener('storage', handleStorageUpdate)
   }, [])
 
   useEffect(() => {
@@ -64,38 +79,51 @@ const UsageUpdate = () => {
       newValues[name][day - 1] = value
       return newValues
     })
+    setLastUpdated({item: name, day: day - 1})
   }
 
   const handleUpdateClick = name => {
-    const itemInputValues = inputValues[name] || Array(31).fill('')
-    const numericValues = itemInputValues.map(val => parseFloat(val) || 0)
-    const totalUsed = numericValues.reduce((sum, val) => sum + val, 0)
+    if (!lastUpdated.item || lastUpdated.item !== name) {
+      alert('Please modify a value before updating')
+      return
+    }
+
+    const dayIndex = lastUpdated.day
+    const newValue = parseFloat(inputValues[name][dayIndex]) || 0
+
+    setUsage(prev => {
+      const newUsage = {...prev}
+      if (!newUsage[name]) {
+        newUsage[name] = {days: Array(31).fill(0)}
+      } else {
+        newUsage[name] = {days: [...newUsage[name].days]}
+      }
+      newUsage[name].days[dayIndex] = newValue
+      return newUsage
+    })
 
     const currentRemaining =
       remaining[name] !== undefined
         ? parseFloat(remaining[name])
-        : parseFloat(groupedItems[name]?.quantity || 0)
+        : parseFloat(groupedItems[name]?.totalQuantity || 0)
 
-    if (totalUsed > currentRemaining) {
-      alert('Used quantity exceeds remaining quantity')
+    const previousDayValue = usage[name]?.days[dayIndex] || 0
+    const difference = newValue - previousDayValue
+    const newRemaining = currentRemaining - difference
+
+    if (newRemaining < 0) {
+      alert('This update would make remaining quantity negative')
       return
     }
 
-    const newRemaining = currentRemaining - totalUsed
     setRemaining(prev => ({...prev, [name]: newRemaining}))
-
-    setUsage(prev => {
-      const newUsage = {...prev}
-      newUsage[name] = {days: numericValues}
-      return newUsage
-    })
-
-    alert(`Successfully updated usage for ${name}`)
+    alert(`Successfully updated ${name} for day ${dayIndex + 1}`)
+    setLastUpdated({item: null, day: null})
   }
 
   const calculateAmount = name => {
-    const usedQuantity = (inputValues[name] || Array(31).fill('')).reduce(
-      (sum, val) => sum + (parseFloat(val) || 0),
+    const usedQuantity = (usage[name]?.days || Array(31).fill(0)).reduce(
+      (sum, val) => sum + val,
       0,
     )
     const pricePerUnit = groupedItems[name]?.price || 0
@@ -130,12 +158,12 @@ const UsageUpdate = () => {
             </thead>
             <tbody>
               {Object.entries(groupedItems).map(
-                ([name, {id, quantity, unit, price}]) => (
+                ([name, {id, totalQuantity, unit, price}]) => (
                   <tr key={id}>
                     <td>{Object.keys(groupedItems).indexOf(name) + 1}</td>
                     <td>{name}</td>
                     <td>
-                      {quantity.toFixed(2)} {unit}
+                      {totalQuantity.toFixed(2)} {unit}
                     </td>
                     {Array.from({length: 31}, (_, i) => (
                       <td key={`${id}-day-${i}`}>
@@ -148,6 +176,7 @@ const UsageUpdate = () => {
                           }
                           className="day-input"
                           aria-label={`${name} usage on day ${i + 1}`}
+                          onFocus={e => e.target.select()}
                         />
                       </td>
                     ))}
@@ -157,6 +186,7 @@ const UsageUpdate = () => {
                       <button
                         className="update-btn"
                         onClick={() => handleUpdateClick(name)}
+                        disabled={lastUpdated.item !== name}
                       >
                         Update
                       </button>
@@ -164,7 +194,7 @@ const UsageUpdate = () => {
                     <td>
                       {remaining[name] !== undefined
                         ? `${remaining[name].toFixed(2)} ${unit}`
-                        : `${quantity.toFixed(2)} ${unit}`}
+                        : `${totalQuantity.toFixed(2)} ${unit}`}
                     </td>
                   </tr>
                 ),

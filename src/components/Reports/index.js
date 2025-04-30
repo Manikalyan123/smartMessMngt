@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react'
 import {useNavigate} from 'react-router-dom'
+import './index.css'
 
 const Reports = () => {
   const navigate = useNavigate()
@@ -9,61 +10,48 @@ const Reports = () => {
     const entries = JSON.parse(localStorage.getItem('groceryEntries')) || []
     const usage = JSON.parse(localStorage.getItem('groceryUsage')) || {}
 
-    const grouped = {}
+    // Calculate total quantity for each item
+    const itemTotals = {}
     entries.forEach(item => {
-      const {name, unit, price, amount, quantity, date} = item
-      if (!grouped[name]) {
-        grouped[name] = {
-          name,
-          unit,
-          price: parseFloat(price),
+      if (!itemTotals[item.name]) {
+        itemTotals[item.name] = {
           quantity: 0,
-          amount: 0,
-          dates: [],
-          dailyUsage: Array(31).fill(0),
+          unit: item.unit,
+          price: item.price || 0,
         }
       }
-      grouped[name].quantity += parseFloat(quantity)
-      grouped[name].amount += parseFloat(amount || 0)
-      grouped[name].dates.push(date || new Date().toISOString().split('T')[0])
+      itemTotals[item.name].quantity += parseFloat(item.quantity)
     })
 
-    Object.keys(usage).forEach(itemName => {
-      if (grouped[itemName] && usage[itemName]?.days) {
-        grouped[itemName].dailyUsage = usage[itemName].days.map(
-          val => parseFloat(val) || 0,
-        )
-      }
-    })
-
-    const finalReport = Object.keys(grouped).map(name => {
-      const item = grouped[name]
-      const totalUsedQty = item.dailyUsage.reduce((sum, qty) => sum + qty, 0)
-      const totalAmount = totalUsedQty * item.price
-      const firstUsageDate = item.dates[0] || 'N/A'
+    // Calculate used quantity and remaining for each item
+    const reportItems = Object.keys(itemTotals).map(name => {
+      const usedQty = usage[name]?.days?.reduce((sum, val) => sum + val, 0) || 0
+      const remainingQty = itemTotals[name].quantity - usedQty
 
       return {
-        id: `${name}-${Math.random().toString(36).substr(2, 9)}`, // More robust unique ID
+        id: `${name}-${Date.now()}`, // Unique ID for each row
         name,
-        unit: item.unit,
-        dailyUsage: item.dailyUsage,
-        totalUsedQty: totalUsedQty.toFixed(2),
-        price: item.price.toFixed(2),
-        amount: totalAmount.toFixed(2),
-        date: firstUsageDate,
+        unit: itemTotals[name].unit,
+        totalQuantity: itemTotals[name].quantity,
+        usedQuantity: usedQty,
+        remainingQuantity: remainingQty,
+        price: itemTotals[name].price,
+        amount: usedQty * itemTotals[name].price,
       }
     })
 
-    setReportData(finalReport)
+    setReportData(reportItems)
   }
 
   useEffect(() => {
     loadReportData()
 
-    const handleDataUpdate = () => loadReportData()
-    window.addEventListener('groceryDataUpdated', handleDataUpdate)
-    return () =>
-      window.removeEventListener('groceryDataUpdated', handleDataUpdate)
+    // Update when storage changes
+    const handleStorageChange = () => {
+      loadReportData()
+    }
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
 
   return (
@@ -71,42 +59,39 @@ const Reports = () => {
       <button className="back-btn" onClick={() => navigate(-1)}>
         ← Back
       </button>
-      <h2>Grocery Expenditure Report</h2>
+      <h2>Grocery Stock Report</h2>
 
       {reportData.length === 0 ? (
         <p>No report data available.</p>
       ) : (
-        <table className="report-table" border="1" cellPadding="5">
+        <table className="report-table">
           <thead>
             <tr>
               <th>S.No</th>
-              <th>Item</th>
-              {Array.from({length: 31}, (_, i) => (
-                <th key={`day-header-${i}`}>{i + 1}</th>
-              ))}
-              <th>Total</th>
-              <th>Rate</th>
-              <th>Amount</th>
+              <th>Item Name</th>
+              <th>Total Quantity</th>
+              <th>Used Quantity</th>
+              <th>Remaining Quantity</th>
+              <th>Price/Unit</th>
+              <th>Total Amount (₹)</th>
             </tr>
           </thead>
           <tbody>
-            {reportData.map((item, index) => (
+            {reportData.map(item => (
               <tr key={item.id}>
-                <td>{index + 1}</td>
+                <td>{reportData.findIndex(i => i.id === item.id) + 1}</td>
                 <td>{item.name}</td>
-                {item.dailyUsage.map(usage => {
-                  const dayId = `${
-                    item.id
-                  }-day-${usage}-${Math.random().toString(36).substr(2, 5)}`
-                  return (
-                    <td key={dayId}>{usage > 0 ? usage.toFixed(2) : '-'}</td>
-                  )
-                })}
                 <td>
-                  {item.totalUsedQty} {item.unit}
+                  {item.totalQuantity.toFixed(2)} {item.unit}
                 </td>
-                <td>₹{item.price}</td>
-                <td>₹{item.amount}</td>
+                <td>
+                  {item.usedQuantity.toFixed(2)} {item.unit}
+                </td>
+                <td>
+                  {item.remainingQuantity.toFixed(2)} {item.unit}
+                </td>
+                <td>₹{item.price.toFixed(2)}</td>
+                <td>₹{item.amount.toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
